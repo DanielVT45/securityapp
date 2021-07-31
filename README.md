@@ -1,2 +1,3 @@
 # securityapp
-Este proyecto sirve para gestionar los accesos de la aplicacion, mediante la generacion de web tokens. Dichos tokens autenticaran y autorizaran a los usuarios.
+Este modulo sirve para gestionar los accesos de las aplicaciones cliente a través de la generacion de un token de acceso. El token autoriza y autentifica a los usuarios de la aplicación.
+
