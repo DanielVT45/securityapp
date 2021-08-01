@@ -11,4 +11,8 @@ class Servidor {
 	mandarRespuesta() {
 		throw new Error("Interface");
 	}
+
+	crearRespuesta() {
+		throw new Error("Interface");
+	}
 }

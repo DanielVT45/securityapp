@@ -49,7 +49,7 @@ class ProxyInverso {
 	 * @param { objecto } respuesta
 	 * @return { JSON object } peticion
 	 * @override */
-	async procesar(peticion, respuesta) {
+	async procesar() {
 		console.log("\nProcesando peticion en el proxy inverso...\n");
 		return verifyToken(this.peticion.headers.token)
 			.then(async (payload) => {
@@ -158,7 +158,7 @@ class ProxyInverso {
 	 * Esta funcion hace peticiones al servidor de fondo.
 	 * @param {Obj} peticion: Representa la peticion hecha por el usuario.
 	 * @override */
-	async hacerPeticion(peticion) {
+	async hacerPeticion() {
 		//crear una instancia del servidor de fondo.
 		console.log("\nRealizando peticion... al servidor de fondo...\n");
 		let servidorFondo = new ServidorFondo(this.peticion, this.respuesta);
