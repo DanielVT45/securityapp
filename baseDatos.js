@@ -25,7 +25,7 @@ const db = {
 
 	//Functiones: busqueda. Retorna el usuario de la base de datos.
 	buscarUsuario: function (data) {
-		console.log("Buscando el usuario en la base de datos dummy...");
+		console.log("Buscando el usuario en la Base De Datos \"dummy\"...");
 		const { email, password } = data;
 		//Extrae las llaves y los valores para armar la query.
 		//let llaves = Object.keys(params);

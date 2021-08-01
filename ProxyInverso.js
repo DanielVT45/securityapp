@@ -13,7 +13,7 @@ const db = require("./baseDatos");
  * Necesito rutas: ["/", "/usuarios", "/productos" ];
  *
  * Necesito determinar un origen y un destino.
- * El origen me va a determinar el destino.
+ * El la ip de destino ba a determinar me va a determinar el servidor de fondo.
  * */
 
 /*const servidoresdeFondo = {
@@ -24,30 +24,59 @@ const db = require("./baseDatos");
 
 /**@implements {Servidor}*/
 class ProxyInverso {
+	/**
+	 *Representa un objeto de tipo Proxy Inverso.
+	 * @constructor
+	 * @param {peticion} objecto Representa el objeto de peticion.
+	 * @param {respuesta} objecto Reresenta el objeto de respuesta
+	 * */
 	constructor(peticion, respuesta) {
-		/*
-		 * 1.- Validar Token.
-		 * 2.- Validar que las credenciales No esten vacias.
-		 * 3.- Buscar el usuario en la base de datos dummy.
-		 * 4.- Comparar las credenciales: passwords. Compara el password cifrado con el que el cliente mando en la peticion.
-		 * 5.- Si se cumple el happy path, entonces se manda la peticion al servidor de Fondo.
-		 *
-		 * */
 		this.peticion = peticion;
 		this.respuesta = respuesta;
-		this.servidor = new ServidorFondo();
 
-		return verifyToken(peticion.headers.token)
-			.then((payload) => {
+		this.ipServidorProxy = "110.54.23.45";
+		this.ipCliente = peticion.network.ipOrigen;
+		this.network = {
+			ipOrigen: this.peticion.ipOrigen,
+			ipCliente: this.peticion.ipOrigen,
+		};
+	}
+
+	/**
+	 * Este metodo simulara las peticiones al servidor de fondo.
+	 * Esta funcion procesa la logina necesaria para validar los acceso de los usuario.
+	 * @param { objecto } peticion
+	 * @param { objecto } respuesta
+	 * @return { JSON object } peticion
+	 * @override */
+	async procesar(peticion, respuesta) {
+		console.log("\nProcesando peticion en el proxy inverso...\n");
+		return verifyToken(this.peticion.headers.token)
+			.then(async (payload) => {
+				if (!this.peticion.data) {
+					console.log("primer filtro");
+					await this.crearRespuesta({
+						codigo: 403,
+						error: true,
+						mensaje: "Faltan credenciales",
+						ipOrigen: this.ipServidorProxy,
+						body: [],
+					});
+					return this.mandarRespuesta();
+				}
+
 				const { email, password } = this.peticion.data;
-
-				//Verifica que la peticion contenga valores:
-				if (!(email && password)) {
-					return this.mandarRespuesta(
-						this.respuesta,
-						"Credenciales Vacias",
-						403
-					);
+				//Verifica que la peticion contenga valores esperados: email y password
+				if (password === "" || email === "") {
+					console.log("segundo filtro");
+					await this.crearRespuesta({
+						codigo: 403,
+						error: true,
+						mensaje: "Faltan credenciales",
+						ipOrigen: this.ipServidor,
+						body: [],
+					});
+					return this.mandarRespuesta();
 				}
 
 				//Buscar en la base de datos dummy.
@@ -64,76 +93,104 @@ class ProxyInverso {
 
 				//Comparamos las credenciales de la peticion con la del usuario recuperado de la base de datos.
 				return compararPassword(password, usuario.password).then(
-					(sonIguales) => {
+					async (sonIguales) => {
 						//console.log(sonIguales);
 						if (sonIguales) {
-							//peticion al servidor
-							return this.procesar();
+							console.log(
+								"\n***************************************************************"
+							);
+							console.log("\t\tACCESO CONCEDIDO AL SISTEMA");
+							console.log(
+								"***************************************************************"
+							);
+							//Mandar peticion al servidor de fondo
+							this.hacerPeticion(this.peticion);
+							await this.crearRespuesta({
+								codigo: 201,
+								error: true,
+								mensaje: "Autenticacion exitosa!",
+								ipOrigen: this.ipServidor,
+								body: [],
+							});
+							return this.mandarRespuesta();
 						}
-              console.log("\n***************************************************************");
-              console.log("\tACCESO DENEGADO AL SISTEMA");
-              console.log("***************************************************************");
 
-						return this.mandarRespuesta(
-							this.respuesta,
-							"Credenciales incorrectas",
-							403
+						await this.crearRespuesta({
+							codigo: 403,
+							error: true,
+							mensaje: "Las credenciales NO coinciden",
+							ipOrigen: this.ipServidor,
+							body: [],
+						});
+
+						console.log(
+							"\n***************************************************************"
 						);
+					  console.log("\t\tACCESO DENEGADO AL SISTEMA.");
+						console.log(
+							"***************************************************************"
+						);
+
+						return this.mandarRespuesta();
 					}
 				);
 			})
-			.catch((e) => {
-				console.log("\n***************************************************************");
-				console.log("\tACCESO DENEGADO AL SISTEMA");
-				console.log("***************************************************************");
-
-				console.log(e.name);
+			.catch(async (e) => {
+				console.log(
+					"\n***************************************************************"
+				);
+				console.log("\t\tACCESO DENEGADO AL SISTEMA");
+				console.log(
+					"***************************************************************"
+				);
+				await this.crearRespuesta({
+					codigo: 403,
+					error: true,
+					mensaje: e.message,
+					ipOrigen: this.ipServidorProxy,
+					body: [],
+				});
+				return this.mandarRespuesta();
 			});
-
-		//En caso de que se realicen con exit todas las velidaciones se ejecutara este metodo.
-	}
-
-	/** Este metodo simulara las peticiones al servidor de fondo.
-	 * @param { string } endpoint
-	 * @return { JSON }
-	 * @override */
-	async procesar() {
-		//Logica del programa.
-		//console.clear();
-		console.log("\n***************************************************************");
-		console.log("\tACCESO CONCEDIDO AL SISTEMA (HAPPY PATH)");
-		console.log("***************************************************************");
-		
-		console.log("Procesando... el proxy esta realizando la peticion al servidor de fondo!");
-
-		if (this.peticion.url === "http://10.53.67.42:80/") {
-			let recursos = await this.hacerPeticion(this.peticion);
-			console.log(recursos);
-			return this.mandarRespuesta(recursos, "Productos", 200);
-		}
-		return this.mandarRespuesta(null, "Error en el servidor de Fondo", 404);
 	}
 
 	/**
 	 * Esta funcion hace peticiones al servidor de fondo.
-	 * @param {Obj} pet
+	 * @param {Obj} peticion: Representa la peticion hecha por el usuario.
 	 * @override */
-	hacerPeticion(peticion) {
-		this.servidor.hacerPeticion(peticion);
-		return "";
+	async hacerPeticion(peticion) {
+		//crear una instancia del servidor de fondo.
+		console.log("\nRealizando peticion... al servidor de fondo...\n");
+		let servidorFondo = new ServidorFondo(this.peticion, this.respuesta);
+		servidorFondo.procesar();
+	}
+
+	/** Devuelve un objeto de tipo peticion para responder al cliente.
+	 * @param {void}
+	 * @return {objecto}
+	 * */
+	mandarRespuesta() {
+		return {
+			peticion: this.peticion,
+			respuesta: this.respuesta,
+		};
 	}
 
 	/**
 	 * Esta funcion responde al cliente que hizo la peticion.
-	 *
+	 * @param {number} code Es el codigo retornado por el servidor,
+	 * @param {boolean} error Es el error del servidor,
+	 * @param {string} message Es un mensaje adicional que sirve para informar al cliente.,
+	 * @param { object} recurso Representa los datos recuperados del servidor.
 	 * @override */
-	mandarRespuesta(recurso, message, code) {
-		const respuesta = {
-			code: code || 500,
-			message: message || "Error Interno del servidor"
-		};
-
-		return respuesta;
+	crearRespuesta(datos) {
+		const { codigo, error, mensaje, ipOrigen, body } = datos;
+		(this.respuesta.codigo = codigo || 200),
+			(this.respuesta.error = error || false),
+			(this.respuesta.mensaje = mensaje || "peticion exita"),
+			(this.respuesta.ipOrigen = ipOrigen || this.ipServidorProxy),
+			(this.respuesta.ipCliente = this.ipCliente),
+			(this.respuesta.body = body || []);
 	}
 }
 

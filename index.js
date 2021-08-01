@@ -9,15 +9,17 @@ const cliente = require("./cliente");
 		id: 1,
 		name: "Daniel",
 		email: "daniel@example.site",
+    //Password - Cifrado con la biblioteca: bcrypt. (valor en claro: qwerty)
 		password: "$2b$10$0P9J.ysGMGRw/JY5/i3aa.Ay6Bo/NSY8JsrOzgT2wpzYRXiw5cdh2",
 	};
-
+  console.clear();
 	try {
-		//let passwordEncriptado = await encriptar(password, 10);
+		//Se emite y se firma el token.
 		let token = await firmarToken(payload);
-		
+		//Inicializamos el metodo principal de la aplicacion:
 		await cliente.hacerPeticion(token);
 	} catch (e) {
 		console.log(e);
 	}
+  
 })();
